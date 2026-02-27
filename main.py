@@ -146,7 +146,7 @@ def train(problem, bounds, data_path,
     model.apply(init_weights)
 
     optimizer = optim.Adam(model.hidden.parameters(), lr=1e-3)
-    scheduler = CosineAnnealingLR(optimizer, T_max=tighten_epochs, eta_min=1e-4)
+    scheduler = CosineAnnealingLR(optimizer, T_max=tighten_epochs, eta_min=1e-5)
     # eta_min controls the minimum learning rate: higher = warmer end (more exploration),
     # lower = colder end (more refinement). Try 1e-4 or 1e-6 to adjust late-stage optimization.
     history = {'total': [], 'data': [], 'constraint': []}
@@ -169,7 +169,7 @@ def train(problem, bounds, data_path,
 
         history['total'].append(total_loss.item())
         history['data'].append(data_loss.item())
-        #history['constraint'].append(constraint.item())
+        history['constraint'].append(constraint.item())
         
         # Store epoch results for vessel problem - save if predictions changed or every 10 epochs
         if isinstance(problem, VesselProblem):
@@ -215,11 +215,11 @@ def train(problem, bounds, data_path,
             break
 
         if epoch % 100 == 0:
-            print(f"Epoch {epoch:4d} | Loss {total_loss:.3e} | Params {rounded.tolist()}")
+            print(f"Epoch {epoch:4d}  | Params {rounded.tolist()}")
 
     elapsed = time.time() - t0
     print(f"Optimization completed in {elapsed:.1f} s")
-    print(f"Epoch {epoch:4d} | Loss {total_loss:.2e} | Params {rounded.tolist()}")
+    print(f"Epoch {epoch:4d} |  Params {rounded.tolist()}")
 
     # final predictions
     with torch.no_grad():
@@ -255,9 +255,9 @@ if __name__ == '__main__':
     hidden_dim = 72             # ← Try: 32, 64, 72, 128 (wider = more expressive)
 
     # TRAINING HYPERPARAMETERS - ADJUST TO CONTROL OPTIMIZATION
-    patience = 250             # ← Early stopping: stop if loss doesn't improve for N epochs
+    patience = 100             # ← Early stopping: stop if loss doesn't improve for N epochs
     tighten_epochs = 1500     # ← Maximum training epochs (upper bound on total epochs)
-    stable_epochs = 10          # ← Stop if predictions stable for N consecutive epochs
+    stable_epochs = 6          # ← Stop if predictions stable for N consecutive epochs
     
     # How to tune based on results:
     # - If model hasn't converged: increase tighten_epochs or patience
