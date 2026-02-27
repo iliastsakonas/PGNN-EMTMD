@@ -146,7 +146,7 @@ def train(problem, bounds, data_path,
     model.apply(init_weights)
 
     optimizer = optim.Adam(model.hidden.parameters(), lr=1e-3)
-    scheduler = CosineAnnealingLR(optimizer, T_max=tighten_epochs, eta_min=1e-5)
+    scheduler = CosineAnnealingLR(optimizer, T_max=tighten_epochs, eta_min=1e-4)
     # eta_min controls the minimum learning rate: higher = warmer end (more exploration),
     # lower = colder end (more refinement). Try 1e-4 or 1e-6 to adjust late-stage optimization.
     history = {'total': [], 'data': [], 'constraint': []}
@@ -169,7 +169,7 @@ def train(problem, bounds, data_path,
 
         history['total'].append(total_loss.item())
         history['data'].append(data_loss.item())
-        history['constraint'].append(constraint.item())
+        #history['constraint'].append(constraint.item())
         
         # Store epoch results for vessel problem - save if predictions changed or every 10 epochs
         if isinstance(problem, VesselProblem):
@@ -199,7 +199,7 @@ def train(problem, bounds, data_path,
 
         # first-decimal stability early-stop
         param_means = predictions.mean(dim=0)  # average of each predicted parameter across the batch
-        rounded = torch.round(param_means * 10) / 10  # first decimal
+        rounded = torch.round(param_means * 10000) / 10000  # first decimal
         if prev_rounded is not None and torch.all(rounded == prev_rounded):
             stable_count += 1
         else:
@@ -237,27 +237,27 @@ def train(problem, bounds, data_path,
         'epoch_results': epoch_results if isinstance(problem, VesselProblem) else None
     }
     return result
-
+from physics.emtmd import EMTMDProblem
 # 6) Main: run indentation or vessel problem----------
 if __name__ == '__main__':
     # SELECT YOUR PHYSICS PROBLEM
     # Uncomment ONE of the following:
-    problem = IndentationProblem()          # Inverse indentation problem (default)
+    # problem = IndentationProblem()          # Inverse indentation problem (default)
     # problem = VesselProblem()              # Pressure vessel optimization
-    # problem = YourProblem()                # Your custom physics problem
+    problem = EMTMDProblem()                # Your custom physics problem
 
     # Get bounds and data path dynamically from the problem
     bounds = problem.get_bounds()
     data_path = problem.get_data_path() #objective value for each physics problem
     
     # NEURAL NETWORK ARCHITECTURE - TUNE THESE FOR YOUR PROBLEM
-    num_hidden_layers = 3      # ← Try: 2, 3, 4, 5 (more layers = more capacity)
-    hidden_dim = 72            # ← Try: 32, 64, 72, 128 (wider = more expressive)
+    num_hidden_layers = 3       # ← Try: 2, 3, 4, 5 (more layers = more capacity)
+    hidden_dim = 72             # ← Try: 32, 64, 72, 128 (wider = more expressive)
 
     # TRAINING HYPERPARAMETERS - ADJUST TO CONTROL OPTIMIZATION
     patience = 250             # ← Early stopping: stop if loss doesn't improve for N epochs
-    tighten_epochs = 10000     # ← Maximum training epochs (upper bound on total epochs)
-    stable_epochs = 6          # ← Stop if predictions stable for N consecutive epochs
+    tighten_epochs = 1500     # ← Maximum training epochs (upper bound on total epochs)
+    stable_epochs = 10          # ← Stop if predictions stable for N consecutive epochs
     
     # How to tune based on results:
     # - If model hasn't converged: increase tighten_epochs or patience
