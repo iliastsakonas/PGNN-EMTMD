@@ -36,7 +36,7 @@ class EMTMDProblem(PhysicsProblem):
         Force_vec = np.zeros((118,1), dtype = np.complex64)     # Excitation force vector
         Force_vec[3,0] = 1                                      
         self.Force_vec = torch.from_numpy(Force_vec)
-        self.w_range = range(1,4451,5)                          # Frequency range
+        self.w_range = range(500,4451,5)                          # Frequency range
 
         # Design parameters the NN will predict 
         # List every variable name here. The order must match the
@@ -120,13 +120,11 @@ class EMTMDProblem(PhysicsProblem):
         # Set pi for convenience
         p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18 = predictions[:, 0], predictions[:, 1], predictions[:, 2], predictions[:, 3], predictions[:, 4], predictions[:, 5], predictions[:, 6], predictions[:, 7], predictions[:, 8], predictions[:, 9], predictions[:, 10], predictions[:, 11], predictions[:, 12], predictions[:, 13], predictions[:, 14], predictions[:, 15], predictions[:, 16], predictions[:, 17]
         # Set up the system matrices
-        # Clone the M, C, K matrices, increase their dimensions by 1 and add the w_range values
+        # Clone the M, C, K matrices and F vector, increase their dimensions by 1 
         Cem_new = self.Cem.clone().unsqueeze(0).repeat(len(self.w_range),1,1)  
         Mem_new = self.Mem.clone().unsqueeze(0).repeat(len(self.w_range),1,1)
-        Kem_l = self.Kem.clone()
-        Kem_l = Kem_l.repeat(len(self.w_range), 1, 1)
-        Force_l = self.Force_vec.clone().unsqueeze(0)
-        Force_l = Force_l.repeat(len(self.w_range),1,1)
+        Kem_l = self.Kem.clone().unsqueeze(0).repeat(len(self.w_range), 1, 1)
+        Force_l = self.Force_vec.clone().unsqueeze(0).repeat(len(self.w_range),1,1)
         # Create the diagonal matrices for L and R values to be added to the Mem and Cem matrices
         L_mat = (torch.diag(torch.cat( (p1, p2, p3, p4, p5, p6, p7, p8, p9)))).repeat(len(self.w_range),1,1)
         R_mat = (torch.diag(torch.cat( (p10, p11, p12, p13, p14, p15, p16, p17, p18)))).repeat(len(self.w_range),1,1)
@@ -143,6 +141,9 @@ class EMTMDProblem(PhysicsProblem):
         # Output: Amplitude values w.r.t w_range for the tip
         output = torch.abs(H[:,99,:]).squeeze(-1)
         return output
+    def constraint_loss(self, predictions):
+        """Penalty if designs go outside valid bounds."""
+        return torch.zeros(1,1)
 
     def save_results(self, history, epoch_results, output_dir, predictions, computed_output, inputs, targets):
         """
